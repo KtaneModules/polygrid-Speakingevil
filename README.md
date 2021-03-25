@@ -1,1 +1,1 @@
-# polygrid
+#[ModKit Wiki](../../wiki)
