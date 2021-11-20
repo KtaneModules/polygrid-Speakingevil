@@ -30,9 +30,19 @@ public class PolygridScript : MonoBehaviour {
     {
         moduleID = ++moduleIDCounter;
         bool[][] blanks = new bool[2][] { new bool[25], new bool[25] };
-        int[] startgrid = Enumerable.Range(0, 25).Select(x => Random.Range(1, 5)).ToArray();
+        int[] startgrid = Enumerable.Range(0, 25).Select(x => Random.Range(1, 8)).ToArray();
+        bool[] fix = new bool[25];
+        for(int i = 0; i < 7; i++)
+            for(int j = 0; j < 2; j++)
+            {
+                int p = Random.Range(0, 25);
+                while (fix[p])
+                    p = Random.Range(0, 25);
+                fix[p] = true;
+                startgrid[p] = i + 1;
+            }
         int r = Random.Range(0, 25);
-        int blanknum = Random.Range(5, 13);
+        int blanknum = Random.Range(3, 7);
         for (int i = 0; i < blanknum; i++)
         {
             while (blanks[0][r] || blanks[0].Where((x, k) => k / 5 == r / 5 && k != r).All(x => x == true) || blanks[0].Where((x, k) => k % 5 == r % 5 && k != r).All(x => x == true))
@@ -41,13 +51,16 @@ public class PolygridScript : MonoBehaviour {
         }
         int[] remaining = Enumerable.Range(0, 25).Where(x => blanks[0][x] == false).ToArray();
         r = remaining[Random.Range(0, remaining.Length)];
-        blanknum = Random.Range(5, 13);
-        for (int i = 0; i < blanknum; i++)
+        for (int i = 0; i < 9 - blanknum; i++)
         {
             while (blanks[1][r] || blanks[1].Where((x, k) => k / 5 == r / 5 && k != r).All(x => x == true) || blanks[1].Where((x, k) => k % 5 == r % 5 && k != r).All(x => x == true))
                 r = remaining[Random.Range(0, remaining.Length)];
             blanks[1][r] = true;
         }
+        r = Random.Range(0, 25);
+        while (!blanks[0][r] && !blanks[1][r])
+            r = Random.Range(0, 25);
+        startgrid[r] = 8;
         for (int i = 0; i < 5; i++)
             disps[i] = startgrid.Select((x, k) => blanks[0][k] ? 0 : x).Where((x, k) => k / 5 == i).ToArray();
         for (int i = 0; i < 5; i++)
@@ -58,8 +71,8 @@ public class PolygridScript : MonoBehaviour {
         disps = disps.Shuffle();
         for (int i = 0; i < 5; i++)
             disprends[i].material = mats[disps[0][i]];
-        Debug.LogFormat("[Polygrid #{0}] The displayed rows/columns are:\n[Polygrid #{0}] {1}", moduleID, string.Join("\n[Polygrid #" + moduleID + "] ", disps.Select(x => "<" + string.Join("|", x.Select(y => new string[] { " ", "\u25b2", "\u25c6", "\u25cf", "\u2716"}[y]).ToArray()) + ">").ToArray()));
-        Debug.LogFormat("[Polygrid #{0}] The rows and columns fit into this 5\u00d75 grid: \n[Polygrid #{0}] {1}", moduleID, string.Join("\n[Polygrid #" + moduleID + "] ", Enumerable.Range(0, 5).Select(i => startgrid.Where((x, k) => k / 5 == i).Select(x => new string[] { "\u25b2", "\u25c6", "\u25cf", "\u2716" }[x - 1]).ToArray().Join()).ToArray()));
+        Debug.LogFormat("[Polygrid #{0}] The displayed rows/columns are:\n[Polygrid #{0}] {1}", moduleID, string.Join("\n[Polygrid #" + moduleID + "] ", disps.Select(x => "<" + string.Join("|", x.Select(y => new string[] { " ", "\u25b2", "\u25c6", "\u25cf", "\u2716", "\u25bc", "\u25a0", "+", "\u2665"}[y]).ToArray()) + ">").ToArray()));
+        Debug.LogFormat("[Polygrid #{0}] The rows and columns fit into this 5\u00d75 grid: \n[Polygrid #{0}] {1}", moduleID, string.Join("\n[Polygrid #" + moduleID + "] ", Enumerable.Range(0, 5).Select(i => startgrid.Where((x, k) => k / 5 == i).Select(x => new string[] { "\u25b2", "\u25c6", "\u25cf", "\u2716", "\u25bc", "\u25a0", "+", "\u2665" }[x - 1]).ToArray().Join()).ToArray()));
         foreach (KMSelectable arrow in arrows)
         {
             int b = Array.IndexOf(arrows, arrow);
@@ -77,15 +90,18 @@ public class PolygridScript : MonoBehaviour {
                 reset.AddInteractionPunch();
                 Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, reset.transform);
                 Debug.LogFormat("[Polygrid #{0}] Grid reset.", moduleID);
-                for(int i = 0; i < 10; i++)
+                if(placed.All(x => x == true))
+                    for (int i = 0; i < 5; i++)
+                        disprends[i].material = mats[disps[currentdisp][i]];
+                for (int i = 0; i < 10; i++)
                 {
                     placed[i] = false;
                     arrowpressed[i] = false;
-                    arrends[i].material = mats[5];
-                    arrends[i + 10].material = mats[5];
+                    arrends[i].material = mats[9];
+                    arrends[i + 10].material = mats[9];
                 }
-                arrends[20].material = mats[5];
-                arrends[21].material = mats[5];
+                arrends[20].material = mats[9];
+                arrends[21].material = mats[9];
                 for (int i = 0; i < 25; i++)
                 {
                     grid[i] = 0;
@@ -122,7 +138,7 @@ public class PolygridScript : MonoBehaviour {
                 if(grid[(i * 5) + b] != 0 && submission[i] != 0 && grid[(i * 5) + b] != submission[i])
                 {
                     success = false;
-                    Debug.LogFormat("[Polygrid #{0}] Attempt to place {1} into {2}{3}, which is already occupied by {4}", moduleID, new string[] { "\u25b2", "\u25c6", "\u25cf", "\u2716" }[submission[i] - 1], "ABCDE"[i], b + 1, new string[] { "\u25b2", "\u25c6", "\u25cf", "\u2716" }[grid[(i * 5) + b] - 1]);
+                    Debug.LogFormat("[Polygrid #{0}] Attempt to place {1} into {2}{3}, which is already occupied by {4}", moduleID, new string[] { "\u25b2", "\u25c6", "\u25cf", "\u2716", "\u25bc", "\u25a0", "+", "\u2665" }[submission[i] - 1], "ABCDE"[i], b + 1, new string[] { "\u25b2", "\u25c6", "\u25cf", "\u2716", "\u25bc", "\u25a0", "+", "\u2665" }[grid[(i * 5) + b] - 1]);
                     break;
                 }
         }
@@ -132,7 +148,7 @@ public class PolygridScript : MonoBehaviour {
                 if (grid[((b - 5) * 5) + i] != 0 && submission[i] != 0 && grid[((b - 5) * 5) + i] != submission[i])
                 {
                     success = false;
-                    Debug.LogFormat("[Polygrid #{0}] Attempt to place {1} into {2}{3}, which is already occupied by {4}", moduleID, new string[] { "\u25b2", "\u25c6", "\u25cf", "\u2716" }[submission[i] - 1], "ABCDE"[b - 5], i + 1,new string[] { "\u25b2", "\u25c6", "\u25cf", "\u2716" }[grid[((b - 5) * 5) + i] - 1]);
+                    Debug.LogFormat("[Polygrid #{0}] Attempt to place {1} into {2}{3}, which is already occupied by {4}", moduleID, new string[] { "\u25b2", "\u25c6", "\u25cf", "\u2716", "\u25bc", "\u25a0", "+", "\u2665" }[submission[i] - 1], "ABCDE"[b - 5], i + 1,new string[] { "\u25b2", "\u25c6", "\u25cf", "\u2716", "\u25bc", "\u25a0", "+", "\u2665" }[grid[((b - 5) * 5) + i] - 1]);
                     break;
                 }
         }
@@ -140,7 +156,7 @@ public class PolygridScript : MonoBehaviour {
             module.HandleStrike();
         else
         {
-            Debug.LogFormat("[Polygrid #{0}] Placed {1} into {2} {3}", moduleID, "<" + string.Join("|", submission.Select(y => new string[] { " ", "\u25b2", "\u25c6", "\u25cf", "\u2716" }[y]).ToArray()) + ">", b < 5 ? "row" : "column", (b % 5) + 1);
+            Debug.LogFormat("[Polygrid #{0}] Placed {1} into {2} {3}", moduleID, "<" + string.Join("|", submission.Select(y => new string[] { " ", "\u25b2", "\u25c6", "\u25cf", "\u2716", "\u25bc", "\u25a0", "+", "\u2665" }[y]).ToArray()) + ">", b < 5 ? "row" : "column", (b % 5) + 1);
             placed[currentdisp] = true;
             arrowpressed[b] = true;
             arrends[b].material = mats[0];
@@ -154,10 +170,16 @@ public class PolygridScript : MonoBehaviour {
                     grends[d].material = mats[submission[i]];
                 }
             }
-            if (placed.All(x => x == true) && grid.All(x => x != 0))
+            if (placed.All(x => x == true))
             {
-                moduleSolved = true;
-                module.HandlePass();
+                if (grid.All(x => x != 0))
+                {
+                    moduleSolved = true;
+                    module.HandlePass();
+                    Debug.LogFormat("[Polygrid #{0}] All displays placed. No empty cells remain. Module solved.", moduleID);
+                }
+                else
+                    Debug.LogFormat("[Polygrid #{0}] All displays placed. {1} remain{2} empty.", moduleID, string.Join(" ", Enumerable.Range(0, 25).Where(x => grid[x] == 0).Select(x => "ABCDE"[x % 5] + ((x / 5) + 1).ToString()).ToArray()), grid.Count(x => x == 0) > 1 ? "" : "s");
                 for (int i = 0; i < 5; i++)
                     disprends[i].material = mats[0];
             }
@@ -182,7 +204,7 @@ public class PolygridScript : MonoBehaviour {
             int d = placed.Count(x => x == false);
             for(int i = 0; i < d; i++)
             {
-                yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSeconds(1f);
                 scrolls[1].OnInteract();
             }
             yield break;
